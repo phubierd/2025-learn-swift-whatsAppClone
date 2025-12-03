@@ -29,10 +29,18 @@ final class ChatRoomViewModel:ObservableObject {
     
     private func listenToAuthStates(){
         AuthManager.shared.authState.receive(on:DispatchQueue.main).sink {[weak self] authState in
+            guard let self = self else {return}
             switch authState{
             case .loggedIn(let currentUser):
-                self?.currentUser = currentUser
-                self?.getMessage()
+                self.currentUser = currentUser
+                
+                if self.channel.allMembersFetched{
+                    self.getMessage()
+                    print("allMembersFetched -> true, channel members: \(channel.members.map{$0.username})")
+                }else{
+                    self.getAllChannelMembers()
+                    print("allMembersFetched -> false")
+                }
             default:
                 break
             }
@@ -51,6 +59,23 @@ final class ChatRoomViewModel:ObservableObject {
         MessageService.getMessages(for: channel){[weak self] messages in
             self?.messages = messages
             print("messages: \(messages.map{$0.text})")
+        }
+    }
+    
+    private func getAllChannelMembers(){
+        //i aldready have current user, and potentially 2 other members so no need to refetch those
+        
+        guard let currentUser = currentUser else {return}
+        let memebersAldreadyFetched = channel.members.compactMap{$0.uid}
+        var memberUidsToFetch = channel.memberUids.filter{ !memebersAldreadyFetched.contains($0)}
+        memberUidsToFetch = memberUidsToFetch.filter{$0 != currentUser.uid}
+        
+        UserService.getUsers(with: memberUidsToFetch){[weak self] userNode in
+            guard let self = self else {return}
+            self.channel.members.append(contentsOf: userNode.users)
+            self.channel.members.append(currentUser)
+            self.getMessage()
+            print("getAllChannelMembers :\(channel.members.map{$0.username})")
         }
     }
 }

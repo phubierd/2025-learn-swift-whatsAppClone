@@ -50,6 +50,10 @@ struct ChannelItem:Identifiable,Hashable{
         return members.filter{$0.uid != currentUid}
     }
     
+    var allMembersFetched:Bool{
+        return members.count == membersCount
+    }
+    
     var title:String{
         if let name = name{
             return name
