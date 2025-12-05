@@ -26,10 +26,21 @@ struct ChatRoomScreen: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
-                TextInputArea(textMessage: $viewModel.textMessage){
-                    viewModel.sendMessage()
-                }
+                bottomSafeAreaView()
             }
+    }
+    
+    private func bottomSafeAreaView()->some View{
+        VStack(spacing:0){
+            
+            Divider()
+            MediaAttachmentPreview()
+            Divider()
+            
+            TextInputArea(textMessage: $viewModel.textMessage){
+                viewModel.sendMessage()
+            }
+        }
     }
 }
 
