@@ -9,6 +9,8 @@ import SwiftUI
 
 struct MediaAttachmentPreview: View {
     let mediaAttachments:[MediaAttachment]
+    let actionHandler:(_ action:UserAction)->Void
+    
     var body: some View {
         ScrollView(.horizontal,showsIndicators: false){
             HStack{
@@ -37,18 +39,18 @@ struct MediaAttachmentPreview: View {
                 .cornerRadius(5)
                 .clipped()
                 .overlay(alignment: .topTrailing){
-                    cancelButton()
+                    cancelButton(attachment)
                 }
                 .overlay{
-                    playButton("play.fill")
+                    playButton("play.fill",item: attachment)
                         .opacity(attachment.type == .video(UIImage(),.stubURL) ? 1 : 0)
                 }
         }
     }
     
-    private func cancelButton ()-> some View {
+    private func cancelButton (_ item:MediaAttachment)-> some View {
         Button {
-            print("clickkkkk")
+            actionHandler(.remove(item))
         }label:{
             Image(systemName: "xmark")
                 .scaledToFit()
@@ -63,9 +65,9 @@ struct MediaAttachmentPreview: View {
         }
     }
     
-    private func playButton (_ systemName:String)-> some View {
+    private func playButton (_ systemName:String,item:MediaAttachment)-> some View {
         Button {
-            print("playyyyy")
+            actionHandler(.play(item))
         }label:{
             Image(systemName: systemName)
                 .scaledToFit()
@@ -80,17 +82,17 @@ struct MediaAttachmentPreview: View {
         }
     }
     
-    private func audioAttachmentPreview ()-> some View {
+    private func audioAttachmentPreview (_ attachment:MediaAttachment)-> some View {
         ZStack{
             LinearGradient(colors: [.green,.green.opacity(0.8),.teal], startPoint: .topLeading, endPoint: .bottom)
-            playButton("mic.fill")
+            playButton("mic.fill", item: attachment)
                 .padding(.bottom,15)
         }
         .frame(width: Constants.imageDimen * 2,height: Constants.imageDimen)
         .cornerRadius(5)
         .clipped()
         .overlay(alignment: .topTrailing){
-            cancelButton()
+            cancelButton(attachment)
         }
         .overlay(alignment: .bottomLeading){
             Text("Test mp3 file name here")
@@ -109,8 +111,14 @@ extension MediaAttachmentPreview{
         static let listHeight:CGFloat = 100
         static let imageDimen:CGFloat = 80
     }
+    
+    enum UserAction{
+        case play(_ item:MediaAttachment)
+        case remove(_ item:MediaAttachment)
+    }
 }
 
 #Preview {
-    MediaAttachmentPreview(mediaAttachments: [])
+    MediaAttachmentPreview(mediaAttachments: []){ action in
+    }
 }
