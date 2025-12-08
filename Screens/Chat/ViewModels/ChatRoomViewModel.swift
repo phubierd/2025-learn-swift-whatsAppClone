@@ -14,7 +14,9 @@ final class ChatRoomViewModel:ObservableObject {
     @Published var textMessage = ""
     @Published var messages = [MessageItem]()
     @Published var showPhotoPicker = false
+    // this array of photo picker lib
     @Published var photoPickerItems:[PhotosPickerItem] = []
+    // this array of preview on chat screen
     @Published var mediaAttachments:[MediaAttachment] = []
     @Published var videoPlayerState:(show:Bool,player:AVPlayer?) = (false,nil)
     
@@ -23,7 +25,7 @@ final class ChatRoomViewModel:ObservableObject {
     private var currentUser:UserItem?
     
     var showPhotoPickerPreview :Bool {
-        return !mediaAttachments.isEmpty
+        return !mediaAttachments.isEmpty || !photoPickerItems.isEmpty
     }
     
     init(_ channel:ChannelItem){
@@ -114,17 +116,21 @@ final class ChatRoomViewModel:ObservableObject {
     private func parsePhotoPickerItems(_ photoPickerItems:[PhotosPickerItem])async {
         for photoItem in photoPickerItems {
             if photoItem.isVideo {
-                if let movie = try? await photoItem.loadTransferable(type: VideoPickerTransferable.self), let thumbnail = try? await movie.url.generateVideoThumbnail(){
-                    let videoAttachment = MediaAttachment(id: UUID().uuidString, type: .video(thumbnail, movie.url))
+                if let movie = try? await photoItem.loadTransferable(type: VideoPickerTransferable.self),
+                   let thumbnail = try? await movie.url.generateVideoThumbnail(),
+                   let itemIdentifier = photoItem.itemIdentifier {
+                    
+                    let videoAttachment = MediaAttachment(id: itemIdentifier, type: .video(thumbnail, movie.url))
                     self.mediaAttachments.insert(videoAttachment,at:0)
                 }
             }else {
                 guard
                 let data = try? await photoItem.loadTransferable(type: Data.self),
-                let thumbnail = UIImage(data:data)
+                let thumbnail = UIImage(data:data),
+                let itemIdentifier = photoItem.itemIdentifier
                 else {return}
     
-                let photoAttachment = MediaAttachment(id: UUID().uuidString,type: .photo(thumbnail))
+                let photoAttachment = MediaAttachment(id: itemIdentifier,type: .photo(thumbnail))
                 self.mediaAttachments.insert(photoAttachment,at:0)
             }
         }
@@ -142,12 +148,26 @@ final class ChatRoomViewModel:ObservableObject {
         videoPlayerState.player = AVPlayer(url: fileURL)
     }
     
+    private func remove(_ item:MediaAttachment){
+        guard let attachmentIndex = mediaAttachments.firstIndex(where: { attachment in
+            item.id == attachment.id
+        }) else {return}
+        mediaAttachments.remove(at: attachmentIndex)
+        
+        guard let photoIndex = photoPickerItems.firstIndex(where: { photo in
+            item.id == photo.itemIdentifier
+        }) else {return}
+        photoPickerItems.remove(at: photoIndex)
+    }
+    
     func handleMediaAttachmentPreview(_ action:MediaAttachmentPreview.UserAction){
         switch action{
             
         case .play(let attachment):
             guard let fileURL = attachment.fileURL else {return}
             showMediaPlayer(fileURL)
+        case .remove(let attachment):
+            remove(attachment)
         }
     }
 
